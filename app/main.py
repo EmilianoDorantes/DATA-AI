@@ -15,6 +15,6 @@ app.add_middleware(
 agent = create_agent_instance()
 
 
-@app.get("/chat")
-async def get_my_chat(prompt: str):
-    return agent.chat(prompt)
+@app.post("/chat")
+async def get_my_chat(prompt: str, file_path: str):
+    return agent.chat(prompt, file_path=file_path)
