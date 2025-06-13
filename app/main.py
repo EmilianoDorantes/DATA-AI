@@ -6,6 +6,7 @@ import requests
 import os
 import atexit
 import logging
+import pandas as pd
 
 from app.core.config.config import create_agent_instance
 from app.core.services.reader import read_data_with_dtype
@@ -65,10 +66,7 @@ async def get_my_chat(request: ChatRequest):
             file_path = download_file_from_url(file_path)
             temp_file_created = True
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"No se pudo descargar el archivo: {e}"
-            )
+            return {"type": "error", "value": f"No se pudo descargar el archivo: {e}"}
 
     try:
         agent = create_agent_instance(
@@ -76,13 +74,35 @@ async def get_my_chat(request: ChatRequest):
             api_key=request.api_key,
             base_url=request.base_url
         )
-        result = agent.chat(request.prompt)
-        return result
+        response = agent.chat(request.prompt)
+
+        # Manejo de formatos de respuesta según la documentación de PandasAI
+        response_type = getattr(response, "type", None)
+        response_value = getattr(response, "value", None)
+
+        # Si el objeto no tiene atributo .type, inferimos el tipo
+        if response_type is None:
+            if hasattr(response, "chart"):
+                response_type = "plot"
+            elif isinstance(response_value, pd.DataFrame):
+                response_type = "dataframe"
+            elif isinstance(response_value, (float, int)):
+                response_type = "number"
+            elif isinstance(response_value, str):
+                response_type = "string"
+            else:
+                response_type = "unknown"
+
+        # Serialización especial para DataFrame (como dict orient="split")
+        if response_type == "dataframe" and isinstance(response_value, pd.DataFrame):
+            response_value = response_value.to_dict(orient="split")
+
+        return {
+            "type": response_type,
+            "value": response_value
+        }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error durante la interacción con el LLM: {e}"
-        ) from e
+        return {"type": "error", "value": f"Error durante la interacción con el LLM: {str(e)}"}
     finally:
         # Limpia archivo temporal si fue descargado
         if temp_file_created and os.path.exists(file_path):
