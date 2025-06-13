@@ -1,30 +1,45 @@
 import json
+import logging
 
-import pandas as pd
 from fastapi.responses import JSONResponse
 from pandasai.responses.response_parser import ResponseParser
 
 
 class PandasDataFrame(ResponseParser):
-
     def __init__(self, context) -> None:
         super().__init__(context)
 
-
     def parse(self, result):
-        res_is_str_and_has_error = (isinstance(result["value"], str)) and (
-            "invalid" in result["value"].lower()
-            or "openai" in result["value"].lower()
-            or "error" in result["value"].lower()
-        )
-        error_msg = (
-            "Sorry, I am having trouble answering that question. Please try again."
-        )
-        df = pd.DataFrame([result]).to_json(lines=True, orient="records")
-        main_msg = json.loads(df)
+        logging.info(f"[PARSER] Recibido: {result}")
 
-        return (
-            JSONResponse(error_msg)
-            if res_is_str_and_has_error
-            else JSONResponse(main_msg)
-        )
+        fallback_msg = "No pude interpretar tu solicitud. Intenta reformularla o revisa el archivo."
+
+        try:
+            if not isinstance(result, dict):
+                logging.error(f"[PARSER] Se esperaba dict, se recibió {type(result)}")
+                return JSONResponse(
+                    {"type": "error", "value": str(result)},
+                    status_code=400
+                )
+
+            response_type = result.get("type")
+            response_value = result.get("value")
+
+            if response_type in ["dataframe", "plot", "string", "number"]:
+                return JSONResponse(
+                    {"type": response_type, "value": response_value},
+                    status_code=200
+                )
+
+            logging.warning(f"[PARSER] Tipo inesperado: {response_type}")
+            return JSONResponse(
+                {"type": "error", "value": fallback_msg},
+                status_code=400
+            )
+
+        except Exception as e:
+            logging.exception(f"[PARSER] Error interno: {e}")
+            return JSONResponse(
+                {"type": "error", "value": f"Error interno del parser: {e}"},
+                status_code=500
+            )
