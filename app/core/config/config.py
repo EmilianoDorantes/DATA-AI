@@ -4,22 +4,21 @@ from pandasai.connectors.pandas import PandasConnectorConfig
 
 from app.core.llm.openai import MyOpenAI
 from app.core.parser.response_parser import PandasDataFrame
+from app.core.services.helpers import get_env
 from app.core.services.reader import read_data_with_dtype
 
-def create_agent_instance(path_to_data, api_key, base_url) -> Agent:
-    data = read_data_with_dtype(path_to_data)
+
+def create_agent_instance() -> Agent:
+    data = read_data_with_dtype(get_env("PATH_TO_DATA"))
     connector = PandasConnector(
         PandasConnectorConfig(original_df=data),
     )
     data_custom_head = data.head(25)
-    llm = MyOpenAI(
-        api_key=api_key,
-        base_url=base_url
-    )
+    openai = MyOpenAI(api_token=get_env("OPENAI_API"))
     return Agent(
         connector,
         config={
-            "llm": llm,
+            "llm": openai,
             "response_parser": PandasDataFrame,
             "custom_head": data_custom_head,
         },
