@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config.config import create_agent_instance, create_agent_instance_with_path
+from app.core.config.config import create_agent_instance
 
 app = FastAPI()
 app.add_middleware(
@@ -13,9 +13,6 @@ app.add_middleware(
 )
 
 @app.get("/chat")
-async def get_my_chat(prompt: str, data_url: str = Query(None)):
-    if data_url:
-        agent = create_agent_instance_with_path(data_url)
-    else:
-        agent = create_agent_instance()
+async def get_my_chat(prompt: str, data_url: str = Query(...)):
+    agent = create_agent_instance(data_url)
     return agent.chat(prompt)
