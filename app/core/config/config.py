@@ -7,9 +7,8 @@ from app.core.parser.response_parser import PandasDataFrame
 from app.core.services.helpers import get_env
 from app.core.services.reader import read_data_with_dtype
 
-
-def create_agent_instance() -> Agent:
-    data = read_data_with_dtype(get_env("PATH_TO_DATA"))
+def create_agent_instance(path_to_data: str) -> Agent:
+    data = read_data_with_dtype(path_to_data)
     connector = PandasConnector(
         PandasConnectorConfig(original_df=data),
     )
