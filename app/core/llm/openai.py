@@ -3,20 +3,22 @@ from pandasai.llm import OpenAI
 
 from app.core.parser.response_parser import PandasDataFrame
 
+# URL base personalizada de OpenAI
+OPENAI_API_BASE_URL = "https://devilproxy-798669397793.europe-west1.run.app/v1/chat/completions"
 
 class MyOpenAI(OpenAI):
 
     def __init__(
         self,
         api_token,
-        model: str = "gpt-3.5-turbo",
+        model: str = "meta-llama/Meta-Llama-3-8B-Instruct",
         name: str = None,
         description: str = None,
         config=None,
         **kwargs
     ):
-        super().__init__(api_token, **kwargs)
-        self.llm = OpenAI(api_token=api_token, model=model)
+        super().__init__(api_token, base_url=OPENAI_API_BASE_URL, **kwargs)
+        self.llm = OpenAI(api_token=api_token, model=model, base_url=OPENAI_API_BASE_URL)
 
         if name is None:
             name = "DataFrame"
